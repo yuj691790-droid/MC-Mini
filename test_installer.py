@@ -4,9 +4,9 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
-from installer import Installer, allowed, library_files, rewrite, safe_path
+from installer import Installer, allowed, library_files, rewrite, safe_path, checked
 
 
 class InstallerTests(unittest.TestCase):
@@ -36,11 +36,17 @@ class InstallerTests(unittest.TestCase):
             path = Path(folder) / "client.jar"
             path.write_bytes(b"previous")
             job = ("https://example.com/client", path, hashlib.sha1(b"correct").hexdigest(), 7, "file")
-            with patch("installer.request", return_value=io.BytesIO(b"corrupt")):
-                with self.assertRaises(ValueError):
+            process = Mock(returncode=0)
+            process.poll.return_value = 0
+            def corrupt(*args, **kwargs):
+                path.with_name(path.name + '.mcmini-part').write_bytes(b'corrupt')
+                return process
+            with patch('aria2_downloads.executable', return_value=Path('aria2c.exe')), patch(
+                    'aria2_downloads.subprocess.Popen', side_effect=corrupt):
+                with self.assertRaises(OSError):
                     Installer(folder).download(job)
-            self.assertEqual(path.read_bytes(), b"previous")
-            self.assertFalse(path.with_name("client.jar.mcmini-part").exists())
+            self.assertEqual(path.read_bytes(), b'previous')
+
 
     def test_full_install_and_reuse(self):
         blobs = {"client": b"jar", "asset": b"sound", "library": b"library"}
@@ -59,9 +65,13 @@ class InstallerTests(unittest.TestCase):
         raw = json.dumps(meta).encode()
         with tempfile.TemporaryDirectory() as folder:
             installer = Installer(folder, "official", lambda _: None)
-            with patch("installer.get_json", return_value=(meta, raw)), patch(
-                "installer.request", side_effect=lambda url: io.BytesIO(blobs[url.rsplit("/", 1)[1]])
-            ):
+            def transfer(items, cancel, log, logdir):
+                for url, dest, sha1, size, kind in items:
+                    data = blobs[url.rsplit('/', 1)[1]]
+                    checked(data, sha1, size)
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    dest.write_bytes(data)
+            with patch("installer.get_json", return_value=(meta, raw)), patch('installer.fetch', side_effect=transfer):
                 target = installer.install({"id": "test", "url": "https://example.com/meta"})
             self.assertEqual((target / "test.json").read_bytes(), raw)
             self.assertEqual((Path(folder) / "resources/sound/test.ogg").read_bytes(), b"sound")

@@ -1,19 +1,18 @@
 """Shared downloads and vanilla Minecraft installation."""
-import concurrent.futures
 import hashlib
-import http.client
 import json
 import os
 from pathlib import Path
 import platform
 import re
 import shutil
-import ssl
 import sys
 import threading
 import urllib.parse
 import urllib.error
 import urllib.request
+
+from aria2_downloads import fetch
 
 DATA = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))
 SOURCES = json.loads((DATA / "sources.json").read_text(encoding="utf-8"))
@@ -141,44 +140,12 @@ class Installer:
             raise InterruptedError("安装已取消；已校验文件可在下次安装时复用")
 
     def download(self, item):
-        for attempt in range(2):
-            try:
-                return self._download_once(item)
-            except (urllib.error.URLError, TimeoutError, ConnectionError,
-                    ssl.SSLError, http.client.IncompleteRead) as error:
-                if isinstance(error, urllib.error.HTTPError) and error.code < 500:
-                    raise
-                if attempt:
-                    raise OSError(f"下载失败：{item[1].name}\n{error}") from error
-                self.log(f"临时传输错误，重试一次：{item[1].name}")
-                self.cancel.wait(0.5)
-                self.stop_check()
+        self.download_many([item])
 
-    def _download_once(self, item):
-        url, path, sha1, size, kind = item
-        self.stop_check()
-        if path.exists() and sha1:
-            if (size is None or path.stat().st_size == size):
-                with path.open("rb") as stream:
-                    if hashlib.file_digest(stream, "sha1").hexdigest() == sha1:
-                        return
-        path.parent.mkdir(parents=True, exist_ok=True)
-        temp = path.with_name(path.name + ".mcmini-part")
-        try:
-            digest, length = hashlib.sha1(), 0
-            with request(rewrite(url, self.source, kind)) as response, temp.open("wb") as out:
-                while chunk := response.read(256 * 1024):
-                    self.stop_check()
-                    digest.update(chunk)
-                    length += len(chunk)
-                    out.write(chunk)
-            if size is not None and length != size:
-                raise ValueError(f"长度校验失败：{path.name}")
-            if sha1 and digest.hexdigest() != sha1:
-                raise ValueError(f"SHA-1 校验失败：{path.name}")
-            os.replace(temp, path)
-        finally:
-            temp.unlink(missing_ok=True)
+    def download_many(self, items):
+        rewritten = [(rewrite(url, self.source, kind), path, sha1, size, kind)
+                     for url, path, sha1, size, kind in items]
+        fetch(rewritten, self.cancel, self.log, self.root / '.mcmini/logs')
 
     def install(self, entry):
         name = version_name(entry["id"])
@@ -217,18 +184,7 @@ class Installer:
         if logging:
             add(logging, "assets/log_configs/" + logging["id"])
         self.log(f"校验并下载 {len(jobs)} 个文件（8 路并发）…")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
-            pending = [pool.submit(self.download, job) for job in jobs.values()]
-            try:
-                for count, future in enumerate(concurrent.futures.as_completed(pending), 1):
-                    future.result()
-                    if count % 50 == 0 or count == len(jobs):
-                        self.log(f"文件进度 {count}/{len(jobs)}")
-            except BaseException:
-                self.cancel.set()
-                for future in pending:
-                    future.cancel()
-                raise
+        self.download_many(list(jobs.values()))
         # Older versions require named copies in addition to content-addressed assets.
         for key in ("virtual", "map_to_resources"):
             if index.get(key):

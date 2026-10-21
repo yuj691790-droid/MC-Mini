@@ -5,3 +5,6 @@ dist/
 .venv/
 *.mcmini-part
 java/*.class
+aria2/
+*.aria2
+*.aria2-input

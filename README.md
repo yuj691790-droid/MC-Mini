@@ -5,7 +5,8 @@
 
 ## 使用
 
-1. 双击 `MC-Mini.exe`（构建后位于 `dist`）；无需安装 Python。
+1. **完整解压便携包**，保持 `MC-Mini.exe` 与 `aria2/` 同级，再运行 EXE；无需安装 Python。
+   新版本的文件下载由随包附带的 aria2 负责，不能只复制单个 EXE。
 2. 选择游戏目录。程序放在 PCL 文件夹内或其直接子目录时，会读取
    `PCL/Setup.ini` 的 `LaunchFolderSelect`，优先使用 PCL 已选择的目录。
 3. 选择 MC 版本，再选择“原版”或一种加载器。加载器版本会实时联网获取；
@@ -64,11 +65,13 @@ Maven 读取该哈希，安装器本体仍走镜像。网络失败会显示错�
 
 - 版本 JSON、客户端 JAR、Windows 依赖库与原生库 JAR、资源索引、资源对象、日志配置。
 - 旧版本的 virtual 和 map_to_resources 资源布局。
-- 8 路下载；有 SHA-1 的文件进行完整性验证，已有正确文件直接复用。
-- 临时文件下载完成后替换；全流程成功后才发布版本 JSON。
-- TLS/超时/连接中断及服务器 5xx 错误最多重试一次；其他错误直接显示，
-  可选择另一个源并重新安装；不自动切源。哈希错误不重试。
-- 取消会等待当前网络读取返回（超时 45 秒）；已完成文件保留供下次复用。
+- 单个 aria2 进程管理队列，最多同时下载 8 个文件；有 SHA-1 的文件进行完整性验证，已有正确文件直接复用。
+- 临时文件下载完成并校验后替换；全流程成功后才发布版本 JSON。
+- 文件下载使用 aria2，最多尝试 5 次，重试间隔 2 秒；保持 TLS 证书验证。
+  失败或取消后保留 `.mcmini-part` / `.aria2` 断点，下次安装继续；不会自动切源。
+  最终文件仍经本程序校验后发布，原文件不会被未校验的下载覆盖。
+- 取消会结束 aria2 进程并保留断点。版本目录等元数据请求仍由 Python 读取，超时 45 秒。
+- 下载诊断日志：游戏目录下 `.mcmini/logs/aria2-download.log`。
 - 同名版本 JSON 不同则拒绝覆盖，以免破坏用户已有整合包。
 - 目前针对 Windows x64；游戏版本及第三方镜像自身的可用性由上游决定。
 
@@ -78,7 +81,7 @@ Maven 读取该哈希，安装器本体仍走镜像。网络失败会显示错�
 
 ## 从源码运行
 
-Python 3.11+，含 Tk；运行时无 pip 依赖。
+Python 3.11+，含 Tk；运行时无 pip 依赖。先执行 `python fetch_aria2.py` 准备独立下载器。
 
 ```powershell
 python app.py
@@ -106,7 +109,9 @@ OptiFine 的微型 Java 桥接器由 `OptiFineBridge.java` 编译；
 
 ## 代码结构
 
-- `installer.py`：下载、哈希校验、Maven 路径与原版安装。
+- `installer.py`：下载源映射、Maven 路径与原版安装。
+- `aria2_downloads.py`：aria2 队列、断点续传、进程取消与校验发布。
+- `fetch_aria2.py`：按固定 SHA-256 获取 aria2 及许可证/对应源码。
 - `loaders.py`：四种组件的动态目录、安装与隔离发布。
 - `app.py`：界面、刷新周期、用户选择与命令行。
 - `OptiFineBridge.java`：调用 OptiFine 公开安装入口，不包含其实现。
@@ -127,3 +132,10 @@ OptiFine 的微型 Java 桥接器由 `OptiFineBridge.java` 编译；
 [Fabric Meta](https://github.com/FabricMC/fabric-meta/blob/master/README.md)、
 [Forge Installer](https://github.com/MinecraftForge/Installer)、
 [NeoForge 客户端安装](https://docs.neoforged.net/user/docs/client/)。
+
+## aria2 第三方组件
+
+aria2 1.37.0 作为独立命令行程序随便携包提供，采用 GPL-2.0-or-later，
+不适用 MC Mini 的非商业限制。`aria2/` 包含原始 COPYING、附加声明、
+Windows 构建说明和同版本源码归档；本项目没有修改 aria2。
+下载器使用说明见 [aria2 官方文档](https://aria2.github.io/manual/en/html/aria2c.html)。
