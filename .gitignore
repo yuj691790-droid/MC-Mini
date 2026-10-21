@@ -1,0 +1,7 @@
+__pycache__/
+build/
+dist/
+*.spec
+.venv/
+*.mcmini-part
+java/*.class

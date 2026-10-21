@@ -1,0 +1,22 @@
+{
+  "manifest": "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
+  "mirror": "https://bmclapi2.bangbang93.com",
+  "assets": "https://resources.download.minecraft.net",
+  "libraries": "https://libraries.minecraft.net",
+  "extracted": {
+    "vanilla_official": "https://launchermeta.mojang.com/mc/game/version_manifest.json",
+    "vanilla_mirror": "https://bmclapi2.bangbang93.com/mc/game/version_manifest.json",
+    "fabric_official": "https://meta.fabricmc.net/v2/versions",
+    "fabric_mirror": "https://bmclapi2.bangbang93.com/fabric-meta/v2/versions",
+    "forge_official": "https://files.minecraftforge.net/maven/net/minecraftforge/forge/index_1.2.4.html",
+    "forge_mirror": "https://bmclapi2.bangbang93.com/forge/minecraft",
+    "forge_recommended": "https://bmclapi2.bangbang93.com/forge/promos",
+    "neoforge_official": "https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge",
+    "neoforge_legacy": "https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/forge",
+    "neoforge_mirror": "https://bmclapi2.bangbang93.com/neoforge/meta/api/maven/details/releases/net/neoforged/neoforge",
+    "optifine_official": "https://optifine.net/downloads",
+    "optifine_mirror": "https://bmclapi2.bangbang93.com/optifine/versionList",
+    "liteloader_official": "https://dl.liteloader.com/versions/versions.json",
+    "liteloader_mirror": "https://bmclapi2.bangbang93.com/maven/com/mumfrey/liteloader/versions.json"
+  }
+}
