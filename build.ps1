@@ -19,7 +19,7 @@ try {
     if ($LASTEXITCODE) { throw 'venv creation failed' }
     & .\.venv\Scripts\python.exe -m pip install pyinstaller==6.20.0
     if ($LASTEXITCODE) { throw 'PyInstaller installation failed' }
-    & .\.venv\Scripts\python.exe -m PyInstaller --noconfirm --clean --onefile --windowed --name MC-Mini --add-data 'sources.json;.' --add-data 'java;java' app.py
+    & .\.venv\Scripts\python.exe -m PyInstaller --noconfirm --clean --onefile --windowed --name MC-Mini --add-data 'sources.json;.' --add-data 'java;java' --add-data 'aria2;aria2' app.py
     if ($LASTEXITCODE) { throw 'Build failed' }
     Copy-Item -LiteralPath aria2 -Destination dist -Recurse -Force
 } finally {

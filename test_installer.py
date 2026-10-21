@@ -66,7 +66,8 @@ class InstallerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             installer = Installer(folder, "official", lambda _: None)
             def transfer(items, cancel, log, logdir, progress=None):
-                for url, dest, sha1, size, kind in items:
+                for urls, dest, sha1, size, kind in items:
+                    url = urls[0] if isinstance(urls, list) else urls
                     data = blobs[url.rsplit('/', 1)[1]]
                     checked(data, sha1, size)
                     dest.parent.mkdir(parents=True, exist_ok=True)

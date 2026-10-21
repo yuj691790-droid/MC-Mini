@@ -51,7 +51,7 @@ def catalog(kind, minecraft, source):
                                  if e.text.startswith(prefix)), key=sort_key, reverse=True)]
     if kind == "NeoForge":
         artifact = "forge" if minecraft == "1.20.1" else "neoforge"
-        base = SOURCES["mirror"] + "/neoforge" if source == "bmclapi" else "https://maven.neoforged.net"
+        base = SOURCES["mirror"] + "/neoforge" if source == "bmclapi" else SOURCES["neoforge_maven"]
         endpoint = "/meta/api/maven/details/releases/net/neoforged/" if source == "bmclapi" else "/api/maven/versions/releases/net/neoforged/"
         data, _ = get_json(base + endpoint + artifact, source)
         versions = ([item["name"] for item in data["files"] if item["type"] == "DIRECTORY"]
@@ -195,7 +195,7 @@ def installer_url(kind, minecraft, choice, source):
     if kind == "NeoForge":
         v = version_name(choice["version"])
         a = choice["artifact"]
-        return f"https://maven.neoforged.net/releases/net/neoforged/{a}/{v}/{a}-{v}-installer.jar"
+        return f"{SOURCES['neoforge_maven']}/releases/net/neoforged/{a}/{v}/{a}-{v}-installer.jar"
     if source == "bmclapi":
         return SOURCES["mirror"] + f"/optifine/{minecraft}/{choice['type']}/{choice['patch']}"
     filename = urllib.parse.quote(choice["filename"])

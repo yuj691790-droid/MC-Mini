@@ -18,5 +18,6 @@
     "optifine_mirror": "https://bmclapi2.bangbang93.com/optifine/versionList",
     "liteloader_official": "https://dl.liteloader.com/versions/versions.json",
     "liteloader_mirror": "https://bmclapi2.bangbang93.com/maven/com/mumfrey/liteloader/versions.json"
-  }
+  },
+  "neoforge_maven": "https://neoforged.forgecdn.net"
 }

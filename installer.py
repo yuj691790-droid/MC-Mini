@@ -45,11 +45,11 @@ def rewrite(url, source, kind="file"):
         "resources.download.minecraft.net", "libraries.minecraft.net",
     }
     if source == "bmclapi" and parsed.hostname in ("maven.minecraftforge.net", "files.minecraftforge.net",
-                                                   "maven.fabricmc.net", "maven.neoforged.net"):
+                                                   "maven.fabricmc.net", "maven.neoforged.net", "neoforged.forgecdn.net"):
         path = parsed.path
         if parsed.hostname == "files.minecraftforge.net" and path.startswith("/maven/"):
             path = path[6:]
-        if parsed.hostname == "maven.neoforged.net":
+        if parsed.hostname in ("maven.neoforged.net", "neoforged.forgecdn.net"):
             # The mirror drops the "releases" segment; this matches PCL's own mapping.
             if path.startswith("/releases/"):
                 path = path[len("/releases"):]
@@ -75,11 +75,27 @@ def checked(data, sha1=None, size=None):
         raise ValueError("下载文件 SHA-1 不匹配")
 
 
+def source_urls(url, source, kind="file"):
+    alternate = "official" if source == "bmclapi" else "bmclapi"
+    return list(dict.fromkeys(rewrite(url, selected, kind) for selected in (source, alternate)))
+
+
 def get_json(url, source, sha1=None):
-    with request(rewrite(url, source)) as response:
-        data = response.read()
-    checked(data, sha1)
-    return json.loads(data), data
+    candidates = source_urls(url, source)
+    for index, candidate in enumerate(candidates):
+        try:
+            with request(candidate) as response:
+                data = response.read()
+        except urllib.error.URLError as error:
+            if isinstance(error, urllib.error.HTTPError):
+                error.close()
+                if error.code < 500 and error.code not in (408, 429):
+                    raise
+            if index == len(candidates) - 1:
+                raise
+            continue
+        checked(data, sha1)
+        return json.loads(data), data
 
 
 def manifest(source):
@@ -144,7 +160,7 @@ class Installer:
         self.download_many([item])
 
     def download_many(self, items):
-        rewritten = [(rewrite(url, self.source, kind), path, sha1, size, kind)
+        rewritten = [(source_urls(url, self.source, kind), path, sha1, size, kind)
                      for url, path, sha1, size, kind in items]
         fetch(rewritten, self.cancel, self.log, self.root / '.mcmini/logs', progress=self.progress)
 

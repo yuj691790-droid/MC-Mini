@@ -77,10 +77,12 @@ class ProgressReader:
 
 def executable():
     home = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).parent
-    path = home / 'aria2' / 'aria2c.exe'
-    if not path.is_file():
-        raise FileNotFoundError('缺少 aria2/aria2c.exe；请完整解压便携包，勿只复制 MC-Mini.exe。')
-    return path
+    bundled = Path(getattr(sys, '_MEIPASS', home)) / 'aria2' / 'aria2c.exe'
+    external = home / 'aria2' / 'aria2c.exe'
+    for path in (bundled, external):
+        if path.is_file():
+            return path
+    raise FileNotFoundError('缺少 aria2c.exe；请使用完整构建的 MC-Mini.exe 或在旁边保留 aria2 文件夹。')
 
 
 def valid(path, sha1, size):
@@ -95,7 +97,10 @@ def valid(path, sha1, size):
 def fetch(items, cancel, log, logdir, progress=None):
     pending = []
     cached = 0
-    for url, path, sha1, size, _ in items:
+    for urls, path, sha1, size, _ in items:
+        urls = [urls] if isinstance(urls, str) else urls
+        if not urls:
+            raise ValueError("下载地址列表为空")
         if cancel.is_set():
             raise InterruptedError('下载已取消；断点和已校验文件已保留。')
         if sha1 and valid(path, sha1, size):
@@ -103,12 +108,12 @@ def fetch(items, cancel, log, logdir, progress=None):
             continue
         temp = path.with_name(path.name + '.mcmini-part')
         # Input-file options are line based: reject remote metadata injection.
-        if any(c in str(value) for value in (url, temp.parent, temp.name) for c in '\r\n\t'):
+        if any(c in str(value) for value in (*urls, temp.parent, temp.name) for c in '\r\n\t'):
             raise ValueError('下载地址或路径包含非法控制字符')
         if sha1 and (len(sha1) != 40 or any(c not in '0123456789abcdefABCDEF' for c in sha1)):
             raise ValueError('非法 SHA-1')
         path.parent.mkdir(parents=True, exist_ok=True)
-        pending.append((url, path, temp, sha1, size))
+        pending.append((urls, path, temp, sha1, size))
     if not pending:
         if progress:
             progress(cached, cached, 0)
@@ -123,19 +128,21 @@ def fetch(items, cancel, log, logdir, progress=None):
     logfile = logdir / 'aria2-download.log'
     with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', suffix='.aria2-input', delete=False) as stream:
         input_path = Path(stream.name)
-        for url, path, temp, sha1, size in pending:
-            stream.write(f'{url}\n  dir={temp.parent}\n  out={temp.name}\n')
+        for urls, path, temp, sha1, size in pending:
+            stream.write('\t'.join(urls) + f'\n  dir={temp.parent}\n  out={temp.name}\n')
+            connections = 4 if size is not None and size >= 8_000_000 else 2 if size is not None and size >= 1_000_000 else 1
+            stream.write(f'  split={connections}\n  max-connection-per-server={connections}\n  max-file-not-found=0\n')
             if sha1:
                 stream.write(f'  checksum=sha-1={sha1.lower()}\n')
     args = [str(program), '--no-conf=true', '--no-netrc=true', '--enable-rpc=false',
             '--check-certificate=true', '--check-integrity=true', '--continue=true',
             '--auto-save-interval=1', '--allow-overwrite=true', '--auto-file-renaming=false', '--file-allocation=none',
-            '--max-concurrent-downloads=8', '--split=2', '--max-connection-per-server=2',
+            '--max-concurrent-downloads=8', '--split=1', '--max-connection-per-server=1', '--min-split-size=1M', '--uri-selector=inorder', '--reuse-uri=false',
             '--max-tries=5', '--retry-wait=2', '--connect-timeout=15', '--timeout=30',
             '--max-file-not-found=1', '--enable-color=false', '--console-log-level=warn',
             '--download-result=hide', '--summary-interval=5', '--follow-metalink=false',
             '--follow-torrent=false', '--input-file=' + str(input_path)]
-    log(f'aria2：下载 {len(pending)} 个文件，支持断点续传…')
+    log(f'aria2：下载 {len(pending)} 个文件，所选源优先，含备用地址及断点续传…')
     if reader:
         args.remove('--enable-rpc=false')
         args.extend(reader.options())
@@ -162,7 +169,7 @@ def fetch(items, cancel, log, logdir, progress=None):
                     reader.sample()
                     next_sample = time.monotonic() + 0.5
         completed = 0
-        for url, path, temp, sha1, size in pending:
+        for urls, path, temp, sha1, size in pending:
             if temp.is_file() and not temp.with_name(temp.name + '.aria2').exists():
                 if valid(temp, sha1, size) or (not sha1 and size is None and process.returncode == 0):
                     os.replace(temp, path)

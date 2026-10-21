@@ -4,13 +4,14 @@ from datetime import datetime
 import os
 from pathlib import Path
 import queue
+import shutil
 import subprocess
 import sys
 import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
-from installer import Installer, manifest
+from installer import DATA, Installer, manifest
 from loaders import KINDS, catalog, find_java, install_loader
 
 HOME = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).parent
@@ -373,7 +374,11 @@ def main():
     parser.add_argument("--loader-version")
     parser.add_argument("--list-loaders", metavar="MC_VERSION")
     parser.add_argument("--java", default=find_java())
+    parser.add_argument("--export-aria2", type=Path, metavar="DIRECTORY", help="Export bundled aria2, licenses and source")
     args = parser.parse_args()
+    if args.export_aria2:
+        shutil.copytree(DATA / "aria2", args.export_aria2, dirs_exist_ok=True)
+        return
     if args.list_loaders:
         for choice in catalog(args.loader, args.list_loaders, args.source):
             print(choice["version"], choice["label"])

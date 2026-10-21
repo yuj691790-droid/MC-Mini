@@ -19,13 +19,21 @@ class Aria2Tests(unittest.TestCase):
             def log_message(self, *args):
                 pass
             def do_GET(self):
-                self.send_response(200)
-                self.send_header('Content-Length', str(len(payload)))
+                header = self.headers.get('Range')
+                start = int(header.split('=')[1].split('-')[0]) if header else 0
+                self.send_response(206 if header else 200)
+                self.send_header('Accept-Ranges', 'bytes')
+                self.send_header('Content-Length', str(len(payload) - start))
+                if header:
+                    self.send_header('Content-Range', f'bytes {start}-{len(payload)-1}/{len(payload)}')
                 self.end_headers()
-                for offset in range(0, len(payload), 16384):
-                    self.wfile.write(payload[offset:offset+16384])
-                    self.wfile.flush()
-                    time.sleep(0.012)
+                try:
+                    for offset in range(start, len(payload), 16384):
+                        self.wfile.write(payload[offset:offset+16384])
+                        self.wfile.flush()
+                        time.sleep(0.012)
+                except ConnectionError:
+                    pass
         server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
         threading.Thread(target=server.serve_forever, daemon=True).start()
         try:

@@ -5,8 +5,8 @@
 
 ## 使用
 
-1. **完整解压便携包**，保持 `MC-Mini.exe` 与 `aria2/` 同级，再运行 EXE；无需安装 Python。
-   新版本的文件下载由随包附带的 aria2 负责，不能只复制单个 EXE。
+1. 运行构建出的 `MC-Mini.exe`；已内置 aria2、许可证和对应源码，无需安装 Python，单个 EXE 即可运行。
+   兼容旧便携布局：没有内置 aria2 时，仍可使用同级 `aria2/aria2c.exe`。
 2. 选择游戏目录。程序放在 PCL 文件夹内或其直接子目录时，会读取
    `PCL/Setup.ini` 的 `LaunchFolderSelect`，优先使用 PCL 已选择的目录。
 3. 选择 MC 版本，再选择“原版”或一种加载器。加载器版本会实时联网获取；
@@ -72,12 +72,12 @@ Maven 读取该哈希，安装器本体仍走镜像。网络失败会显示错�
 
 - 版本 JSON、客户端 JAR、Windows 依赖库与原生库 JAR、资源索引、资源对象、日志配置。
 - 旧版本的 virtual 和 map_to_resources 资源布局。
-- 单个 aria2 进程管理队列，最多同时下载 8 个文件；有 SHA-1 的文件进行完整性验证，已有正确文件直接复用。
+- 单个 aria2 进程管理队列，最多同时下载 8 个文件；小文件 1 连接，1 MB 起 2 连接，8 MB 起最多 4 连接；有 SHA-1 的文件进行完整性验证，已有正确文件直接复用。
 - 临时文件下载完成并校验后替换；全流程成功后才发布版本 JSON。
 - 文件下载使用 aria2，最多尝试 5 次，重试间隔 2 秒；保持 TLS 证书验证。
-  失败或取消后保留 `.mcmini-part` / `.aria2` 断点，下次安装继续；不会自动切源。
+  失败或取消后保留 `.mcmini-part` / `.aria2` 断点，下次安装继续。对可映射地址同时提供所选源和备用源；所选源排在前面，分段下载时可同时使用多个地址。
   最终文件仍经本程序校验后发布，原文件不会被未校验的下载覆盖。
-- 取消会结束 aria2 进程并保留断点。版本目录等元数据请求仍由 Python 读取，超时 45 秒。
+- 取消会结束 aria2 进程并保留断点。版本目录等元数据请求仍由 Python 读取，超时 45 秒；所选源网络失败时尝试可映射的备用地址一次，哈希或 JSON 错误直接报错。
 - 下载诊断日志：游戏目录下 `.mcmini/logs/aria2-download.log`。
 - 同名版本 JSON 不同则拒绝覆盖，以免破坏用户已有整合包。
 - 目前针对 Windows x64；游戏版本及第三方镜像自身的可用性由上游决定。
@@ -142,7 +142,10 @@ OptiFine 的微型 Java 桥接器由 `OptiFineBridge.java` 编译；
 
 ## aria2 第三方组件
 
-aria2 1.37.0 作为独立命令行程序随便携包提供，采用 GPL-2.0-or-later，
+aria2 1.37.0 作为独立命令行程序内置于 EXE，运行时解包后作为独立进程执行，采用 GPL-2.0-or-later，
 不适用 MC Mini 的非商业限制。`aria2/` 包含原始 COPYING、附加声明、
 Windows 构建说明和同版本源码归档；本项目没有修改 aria2。
+可执行 `MC-Mini.exe --export-aria2 <目标目录>` 导出这些第三方文件；本项目的非商业限制不适用于它们。
 下载器使用说明见 [aria2 官方文档](https://aria2.github.io/manual/en/html/aria2c.html)。
+
+NeoForge 当前 Maven 地址由 `sources.json` 的 `neoforge_maven` 控制；`extracted` 保留最初的提取记录。
