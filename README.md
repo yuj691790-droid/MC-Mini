@@ -111,11 +111,16 @@ OptiFine 的微型 Java 桥接器由 `OptiFineBridge.java` 编译；
 - `app.py`：界面、刷新周期、用户选择与命令行。
 - `OptiFineBridge.java`：调用 OptiFine 公开安装入口，不包含其实现。
 
-## 开源范围
+## 许可证与授权范围
 
-本仓库新写代码采用 MIT，见 [LICENSE](LICENSE)。
+本项目当前采用 **CC BY-NC-SA 4.0 + 署名豁免**：**非商业、相同方式共享，无需署名**。
+完整说明见 [LICENSE](LICENSE) 与 [CC 协议全文](LICENSE-CC-BY-NC-SA-4.0.txt)。
+无需标注本项目作者，但仍需保留许可协议通知/链接、免责声明、原作品链接及修改标记。
+非商业限制意味着当前版本属于源码可见项目，不属于通常允许商业使用的开源许可。
+
+已按 MIT 发布的 `v1.0.0` 和对应历史代码仍保留原 MIT 授权；本次变更不追溯撤销这些权利。
 不包含 PCL 可执行文件、反编译源码、Minecraft 文件、账户信息或游戏目录。
-MIT 仅适用于本项目代码；下载到的第三方内容仍归各自权利人。
+上述授权仅适用于本项目许可人有权授权的内容；PCL、Minecraft、加载器等第三方内容仍遵循各自许可证。
 发布 GitHub 时只提交本文件夹源码，不要提交上级 PCL 文件夹。
 
 接口参考：[BMCLAPI 文档](https://bmclapidoc.bangbang93.com/)、

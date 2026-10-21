@@ -1,21 +1,32 @@
-MIT License
+MC Mini — CC BY-NC-SA 4.0 with an attribution waiver
 
-Copyright (c) 2026 MC Mini contributors
+本项目自本次许可证变更起，采用 Creative Commons Attribution-NonCommercial-
+ShareAlike 4.0 International（CC BY-NC-SA 4.0），并附下述署名豁免。
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+非商业：仅允许许可协议定义的非商业使用。
+相同方式共享：分享改编作品时，遵守 CC BY-NC-SA 4.0 的相同方式共享条款。
+无需署名：就本项目许可人有权授权的内容，许可人明确且不可撤销地豁免
+第 3(a)(1)(A)(i) 项的创作者/署名对象标识要求，以及第 3(a)(1)(A)(ii) 项
+的版权声明保留要求。无需标注本项目作者姓名、用户名或作者署名链接。
+其余条款继续适用，包括许可协议通知/链接、免责声明和修改标记。
+本豁免不代表可撤销其他权利人对其内容的署名要求。
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The project is licensed under CC BY-NC-SA 4.0, subject to this additional permission:
+For material the project's licensors are authorized to license, those licensors
+expressly and irrevocably waive the creator/attribution-party identification
+requirement in Section 3(a)(1)(A)(i) and the copyright-notice retention requirement
+in Section 3(a)(1)(A)(ii). No author name, username, or author credit link is required.
+All other conditions remain in force, including license notices/links, disclaimers,
+modification notices, NonCommercial and ShareAlike. This waiver does not waive
+requirements imposed by other rightsholders on their own material.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Full, unmodified license: LICENSE-CC-BY-NC-SA-4.0.txt
+Canonical URL: https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.en
+
+范围与历史 / Scope and history:
+- 仅适用于本项目许可人有权授权的 MC Mini 代码和文档。
+- PCL、Minecraft、加载器及其他第三方内容继续遵循其各自许可证。
+- 变更前已按 MIT 发布的版本（包括 v1.0.0 / 6428f8468613a26ff5282c9be3c61b7fc2e38d40）
+  仍可按原 MIT 许可使用；本次变更不追溯撤销已授予的权利。
+- Previously MIT-licensed versions, including v1.0.0, remain available under their
+  original MIT terms. This change does not revoke previously granted permissions.
