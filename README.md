@@ -1,4 +1,4 @@
-# MC Mini
+# MC-Mini：轻量化MC下载器
 
 独立、轻量的 Minecraft Java 下载与安装工具。Windows x64，Python 标准库 + Tk。
 支持原版、Fabric、Forge、NeoForge、OptiFine；可选 Mojang/加载器官方源或 BMCLAPI。
