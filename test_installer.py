@@ -65,7 +65,7 @@ class InstallerTests(unittest.TestCase):
         raw = json.dumps(meta).encode()
         with tempfile.TemporaryDirectory() as folder:
             installer = Installer(folder, "official", lambda _: None)
-            def transfer(items, cancel, log, logdir):
+            def transfer(items, cancel, log, logdir, progress=None):
                 for url, dest, sha1, size, kind in items:
                     data = blobs[url.rsplit('/', 1)[1]]
                     checked(data, sha1, size)

@@ -12,6 +12,42 @@ from aria2_downloads import fetch
 
 class Aria2Tests(unittest.TestCase):
     @unittest.skipUnless((Path(__file__).parent / 'aria2/aria2c.exe').is_file(), 'run fetch_aria2.py first')
+    def test_live_rpc_reports_bytes_and_speed_then_exits(self):
+        payload = b'x' * (3 * 1024 * 1024)
+        updates = []
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+            def do_GET(self):
+                self.send_response(200)
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                for offset in range(0, len(payload), 16384):
+                    self.wfile.write(payload[offset:offset+16384])
+                    self.wfile.flush()
+                    time.sleep(0.012)
+        server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            with tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                cached = root / 'cached'
+                cached.write_bytes(b'cache')
+                jobs = [(f'http://127.0.0.1:{server.server_port}/file', root / 'file',
+                         hashlib.sha1(payload).hexdigest(), len(payload), 'file'),
+                        ('https://example.com/cached', cached, hashlib.sha1(b'cache').hexdigest(), 5, 'file')]
+                fetch(jobs, threading.Event(), lambda _: None, root / 'logs',
+                      progress=lambda *data: updates.append(data))
+                total = len(payload) + 5
+                self.assertEqual(updates[0], (5, total, 0))
+                self.assertTrue(any(5 < done < total and speed > 0 for done, _, speed in updates), updates)
+                self.assertEqual(updates[-1], (total, total, 0))
+                self.assertEqual((root / 'file').read_bytes(), payload)
+        finally:
+            server.shutdown()
+            server.server_close()
+
+    @unittest.skipUnless((Path(__file__).parent / 'aria2/aria2c.exe').is_file(), 'run fetch_aria2.py first')
     def test_cancel_stops_process_and_retains_partial_file(self):
         started = threading.Event()
         cancel = threading.Event()

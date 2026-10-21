@@ -129,10 +129,11 @@ def library_files(library):
 
 
 class Installer:
-    def __init__(self, root, source="bmclapi", log=print, cancel=None):
+    def __init__(self, root, source="bmclapi", log=print, cancel=None, progress=None):
         self.root = Path(root).resolve()
         self.source = source
         self.log = log
+        self.progress = progress
         self.cancel = cancel or threading.Event()
 
     def stop_check(self):
@@ -145,7 +146,7 @@ class Installer:
     def download_many(self, items):
         rewritten = [(rewrite(url, self.source, kind), path, sha1, size, kind)
                      for url, path, sha1, size, kind in items]
-        fetch(rewritten, self.cancel, self.log, self.root / '.mcmini/logs')
+        fetch(rewritten, self.cancel, self.log, self.root / '.mcmini/logs', progress=self.progress)
 
     def install(self, entry):
         name = version_name(entry["id"])

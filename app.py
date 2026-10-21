@@ -31,12 +31,73 @@ def detect():
     return str(Path(os.environ["APPDATA"]) / ".minecraft"), ""
 
 
+class DownloadProgress(tk.Canvas):
+    def __init__(self, parent):
+        super().__init__(parent, height=42, background="#172235", highlightthickness=0)
+        self.percent = 0.0
+        self.speed = 0.0
+        self.caption = "等待下载"
+        self.bind("<Configure>", lambda _: self.draw())
+
+    def update_progress(self, completed, total, speed):
+        self.percent = min(100.0, max(0.0, completed / total * 100)) if total else None
+        self.speed = speed / 1_000_000
+        self.caption = "下载中" if speed else "已传输" if total and completed >= total else "等待传输"
+        self.draw()
+
+    def stop(self, caption):
+        self.speed = 0.0
+        self.caption = caption
+        self.draw()
+
+    def draw(self):
+        self.delete("all")
+        width, height = self.winfo_width(), 38
+        def rounded(x, y, w, h, color):
+            r = min(10, w / 2)
+            self.create_polygon(x+r,y,x+w-r,y,x+w,y,x+w,y+r,x+w,y+h-r,x+w,y+h,
+                                x+w-r,y+h,x+r,y+h,x,y+h,x,y+h-r,x,y+r,x,y,
+                                smooth=True, fill=color, outline="")
+        rounded(0, 2, width, height, "#0e1727")
+        fill = width * (self.percent or 0) / 100
+        if fill > 0:
+            rounded(0, 2, fill, height, "#366ac4")
+        percent = f"{self.percent:.1f}%" if self.percent is not None else "计算大小中"
+        self.create_text(width/2, height/2+2,
+                         text=f"{self.caption}   ·   {percent}   ·   {self.speed:.2f} MB/s",
+                         fill="#f1f5fc", font=("Microsoft YaHei UI", 11, "bold"))
+
+
 class App:
     def __init__(self, root):
         self.root = root
-        root.title("MC Mini · Minecraft 与加载器安装")
-        root.geometry("900x760")
-        root.minsize(780, 650)
+        root.title("MC-Mini · 轻量化 MC 下载器")
+        root.geometry("980x740")
+        root.minsize(850, 650)
+        root.configure(background="#101827")
+        style = ttk.Style(root)
+        style.theme_use("clam")
+        style.configure(".", font=("Microsoft YaHei UI", 10), background="#101827", foreground="#e5edf9")
+        style.configure("TFrame", background="#101827")
+        style.configure("Card.TFrame", background="#172235")
+        style.configure("TLabel", background="#101827", foreground="#dbe6f7")
+        style.configure("Muted.TLabel", foreground="#93a6c3")
+        style.configure("Card.TLabel", background="#172235", foreground="#b7c7df")
+        style.configure("TEntry", fieldbackground="#101b2d", foreground="#edf3ff", bordercolor="#30435f", padding=7)
+        style.configure("TCombobox", fieldbackground="#101b2d", background="#22334e", foreground="#edf3ff", arrowcolor="#a9c7f5", padding=6)
+        style.map("TCombobox", fieldbackground=[("readonly", "#101b2d")], foreground=[("readonly", "#edf3ff"), ("disabled", "#6d7f99")])
+        root.option_add("*TCombobox*Listbox.background", "#172235")
+        root.option_add("*TCombobox*Listbox.foreground", "#edf3ff")
+        root.option_add("*TCombobox*Listbox.selectBackground", "#315a91")
+        style.configure("TButton", background="#22334e", foreground="#edf3ff", borderwidth=0, padding=(14, 8))
+        style.map("TButton", background=[("active", "#304969"), ("disabled", "#1a293f")], foreground=[("disabled", "#62738d")])
+        style.configure("Accent.TButton", background="#346cd0", foreground="#ffffff")
+        style.map("Accent.TButton", background=[("active", "#4381eb"), ("disabled", "#263b5d")])
+        style.configure("Treeview", background="#172235", fieldbackground="#172235", foreground="#e5edf9", borderwidth=0, rowheight=32)
+        style.configure("Treeview.Heading", background="#202f47", foreground="#9bb6dd", relief="flat", padding=8)
+        style.map("Treeview", background=[("selected", "#284e80")], foreground=[("selected", "#ffffff")])
+        style.map("Treeview.Heading", background=[("active", "#293c59")])
+        style.configure("Vertical.TScrollbar", background="#314765", troughcolor="#172235", borderwidth=0, arrowcolor="#91a8c9")
         self.events = queue.Queue()
         self.cancel = threading.Event()
         self.entries = {}
@@ -52,41 +113,45 @@ class App:
         self.kind = tk.StringVar(value="原版")
         self.loader_version = tk.StringVar()
         self.java = tk.StringVar(value=find_java())
-        frame = ttk.Frame(root, padding=18)
+        frame = ttk.Frame(root, padding=22)
         frame.pack(fill="both", expand=True)
-        ttk.Label(frame, text="Minecraft 与加载器安装", font=("Microsoft YaHei UI", 18, "bold")).pack(anchor="w")
-        ttk.Label(frame, text="启动时联网更新；窗口开启期间每 10 分钟刷新。选 MC → 选加载器版本 → 安装 → PCL 启动。").pack(anchor="w", pady=(3, 12))
+        header = ttk.Frame(frame)
+        header.pack(fill="x", pady=(0, 15))
+        ttk.Label(header, text="MC-Mini", font=("Microsoft YaHei UI", 24, "bold"), foreground="#f1f6ff").pack(side="left")
+        ttk.Label(header, text="轻量化 MC 下载器", style="Muted.TLabel").pack(side="left", padx=15, pady=(9, 0))
+        ttk.Label(header, text="●  aria2 下载引擎", foreground="#76d6bf").pack(side="right", pady=(9, 0))
+        paths = ttk.Frame(frame, style="Card.TFrame", padding=14)
+        paths.pack(fill="x")
         for label, variable, command in (
             ("游戏目录", self.folder, self.pick_folder),
             ("PCL 程序", self.exe, self.pick_exe),
             ("安装用 Java", self.java, self.pick_java),
         ):
-            row = ttk.Frame(frame)
+            row = ttk.Frame(paths, style="Card.TFrame")
             row.pack(fill="x", pady=3)
-            ttk.Label(row, text=label, width=10).pack(side="left")
+            ttk.Label(row, text=label, width=11, style="Card.TLabel").pack(side="left")
             ttk.Entry(row, textvariable=variable).pack(side="left", fill="x", expand=True)
-            ttk.Button(row, text="浏览", command=command).pack(side="left", padx=(6, 0))
+            ttk.Button(row, text="浏览", command=command).pack(side="left", padx=(8, 0))
         bar = ttk.Frame(frame)
-        bar.pack(fill="x", pady=12)
+        bar.pack(fill="x", pady=14)
         source_box = ttk.Combobox(bar, textvariable=self.source, values=["BMCLAPI", "Mojang"], state="readonly", width=12)
         source_box.pack(side="left")
         source_box.bind("<<ComboboxSelected>>", lambda _: self.selection_changed(force=True))
-        self.refresh = ttk.Button(bar, text="刷新版本", command=self.refresh_versions)
-        self.refresh.pack(side="left", padx=6)
         category = ttk.Combobox(bar, textvariable=self.filter, values=["正式版", "快照", "历史版", "全部"], state="readonly", width=9)
-        category.pack(side="left")
+        category.pack(side="left", padx=8)
         category.bind("<<ComboboxSelected>>", lambda _: self.show_versions())
-        ttk.Entry(bar, textvariable=self.search, width=22).pack(side="right")
-        ttk.Label(bar, text="搜索版本 ").pack(side="right")
+        self.refresh = ttk.Button(bar, text="刷新版本", command=self.refresh_versions)
+        self.refresh.pack(side="left")
+        ttk.Entry(bar, textvariable=self.search, width=20).pack(side="right")
+        ttk.Label(bar, text="搜索  ", style="Muted.TLabel").pack(side="right")
         self.search.trace_add("write", lambda *_: self.show_versions())
-        container = ttk.Frame(frame)
+        container = ttk.Frame(frame, style="Card.TFrame")
         container.pack(fill="both", expand=True)
-        self.tree = ttk.Treeview(container, columns=("type", "date"), show="tree headings", selectmode="browse", height=10)
-        self.tree.heading("#0", text="版本")
-        self.tree.heading("type", text="类型")
-        self.tree.heading("date", text="发布时间")
-        self.tree.column("#0", width=280)
-        self.tree.column("type", width=120)
+        self.tree = ttk.Treeview(container, columns=("type", "date"), show="tree headings", selectmode="browse", height=6)
+        for column, title in (("#0", "Minecraft 版本"), ("type", "版本类型"), ("date", "发布时间")):
+            self.tree.heading(column, text=title, anchor="w")
+        self.tree.column("#0", width=340)
+        self.tree.column("type", width=170)
         self.tree.column("date", width=180)
         self.tree.pack(side="left", fill="both", expand=True)
         scroll = ttk.Scrollbar(container, command=self.tree.yview)
@@ -94,26 +159,28 @@ class App:
         self.tree.configure(yscrollcommand=scroll.set)
         self.tree.bind("<<TreeviewSelect>>", lambda _: self.selection_changed())
         loader_row = ttk.Frame(frame)
-        loader_row.pack(fill="x", pady=(10, 0))
+        loader_row.pack(fill="x", pady=(14, 8))
         self.kind_box = ttk.Combobox(loader_row, textvariable=self.kind, values=KINDS, state="readonly", width=12)
         self.kind_box.pack(side="left")
         self.kind_box.bind("<<ComboboxSelected>>", lambda _: self.selection_changed())
         self.loader_box = ttk.Combobox(loader_row, textvariable=self.loader_version, state="disabled")
-        self.loader_box.pack(side="left", fill="x", expand=True, padx=6)
+        self.loader_box.pack(side="left", fill="x", expand=True, padx=8)
         self.loader_refresh = ttk.Button(loader_row, text="刷新加载器", command=lambda: self.selection_changed(force=True))
         self.loader_refresh.pack(side="right")
-        ttk.Label(frame, text="每次安装一种组件；OptiFine 独立安装，不自动组合 Forge。Forge / NeoForge 补丁处理需要合适的 Java。").pack(anchor="w", pady=(5, 0))
-        actions = ttk.Frame(frame)
-        actions.pack(fill="x", pady=10)
-        self.install_button = ttk.Button(actions, text="下载并安装所选版本", command=self.install)
+        ttk.Label(frame, text="先选 MC，再选组件版本  ·  OptiFine 独立安装  ·  使用 PCL 登录并启动", style="Muted.TLabel").pack(anchor="w", pady=(0, 12))
+        footer = ttk.Frame(frame, style="Card.TFrame", padding=14)
+        footer.pack(fill="x")
+        actions = ttk.Frame(footer, style="Card.TFrame")
+        actions.pack(fill="x", pady=(0, 10))
+        self.install_button = ttk.Button(actions, text="↓  下载并安装", style="Accent.TButton", command=self.install)
         self.install_button.pack(side="left")
         self.cancel_button = ttk.Button(actions, text="取消", state="disabled", command=self.cancel.set)
-        self.cancel_button.pack(side="left", padx=6)
-        ttk.Button(actions, text="打开 PCL", command=self.open_pcl).pack(side="right")
+        self.cancel_button.pack(side="left", padx=8)
+        ttk.Button(actions, text="打开 PCL  →", command=self.open_pcl).pack(side="right")
+        self.progress_bar = DownloadProgress(footer)
+        self.progress_bar.pack(fill="x")
         self.status = tk.StringVar(value="刷新版本列表后，选择需要安装的版本。")
-        ttk.Label(frame, textvariable=self.status, wraplength=790).pack(anchor="w")
-        self.output = tk.Text(frame, height=7, state="disabled", font=("Consolas", 9))
-        self.output.pack(fill="x", pady=(8, 0))
+        ttk.Label(footer, textvariable=self.status, style="Card.TLabel", wraplength=850).pack(anchor="w", pady=(8, 0))
         root.protocol("WM_DELETE_WINDOW", self.close)
         root.after(100, self.poll)
         self.refresh_versions()
@@ -222,8 +289,10 @@ class App:
         if kind not in ("原版", "Fabric") and not Path(java).is_file():
             messagebox.showerror("需要 Java", "请选择用于安装的 java.exe。建议使用与该 MC 版本匹配的 Java。")
             return
+        self.progress_bar.update_progress(0, 1, 0)
         def operation():
-            engine = Installer(folder, source, lambda msg: self.events.put(("log", msg)), self.cancel)
+            engine = Installer(folder, source, lambda msg: self.events.put(("log", msg)), self.cancel,
+                               lambda done, total, speed: self.events.put(("progress", (done, total, speed))))
             path = install_loader(engine, entry, kind, choice, java)
             self.events.put(("installed", (path.name, str(path.parent.parent))))
         self.start(operation)
@@ -241,7 +310,9 @@ class App:
     def poll(self):
         while not self.events.empty():
             kind, value = self.events.get_nowait()
-            if kind == "manifest":
+            if kind == "progress":
+                self.progress_bar.update_progress(*value)
+            elif kind == "manifest":
                 previous = set(self.entries)
                 self.entries = {item["id"]: item for item in value["versions"]}
                 self.show_versions()
@@ -274,14 +345,13 @@ class App:
             elif kind == "installed":
                 name, folder = value
                 self.status.set(f"{name} 安装完成。请在 PCL 选择对应游戏目录和版本。")
+                self.progress_bar.update_progress(1, 1, 0)
+                self.progress_bar.stop("安装完成")
                 messagebox.showinfo("安装完成", f"版本：{name}\n游戏目录：{folder}\n\n点击“打开 PCL”，在版本选择中刷新并选择此版本。\n若目录未显示，请先添加上述游戏目录。\n登录账号并点击启动；Java 由 PCL 管理。")
             else:
                 self.status.set(value)
-                self.output.configure(state="normal")
-                self.output.insert("end", value + "\n")
-                self.output.see("end")
-                self.output.configure(state="disabled")
                 if kind == "error":
+                    self.progress_bar.stop("已停止")
                     messagebox.showerror("操作未完成", value + "\n\n可更换下载源后重新安装，完整文件会自动复用。")
         self.root.after(100, self.poll)
 

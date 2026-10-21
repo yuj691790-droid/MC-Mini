@@ -250,8 +250,8 @@ def install_component(installer, minecraft, kind, choice, java="", vanilla=None)
             shutil.copyfile(vanilla / f"{minecraft}.{extension}", base_dir / f"{minecraft}.{extension}")
         # Upstream installers expect the official launcher's profile file.
         (stage / "launcher_profiles.json").write_text('{"profiles":{}}', encoding="utf-8")
-        stage_installer = Installer(stage, installer.source, installer.log, installer.cancel)
-        cache = Installer(work / "cache", installer.source, installer.log, installer.cancel)
+        stage_installer = Installer(stage, installer.source, installer.log, installer.cancel, installer.progress)
+        cache = Installer(work / "cache", installer.source, installer.log, installer.cancel, installer.progress)
         if kind == "OptiFine":
             bridge = DATA / "java"
             run_java(java, ["-cp", str(bridge) + os.pathsep + str(jar),
